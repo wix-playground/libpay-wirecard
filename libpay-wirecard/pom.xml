@@ -1,0 +1,70 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<project xmlns="http://maven.apache.org/POM/4.0.0" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
+    <modelVersion>4.0.0</modelVersion>
+
+    <artifactId>libpay-wirecard</artifactId>
+    <name>libpay WireCard payment gateway adapter</name>
+    <description>WireCard payment gateway</description>
+
+
+    <parent>
+        <groupId>com.wix.pay</groupId>
+        <artifactId>libpay-wirecard-parent</artifactId>
+        <version>1.0.0-SNAPSHOT</version>
+        <relativePath>../libpay-wirecard-parent</relativePath>
+    </parent>
+
+
+    <developers>
+        <developer>
+            <name>Iurii Makhno</name>
+            <email>iuriim@wix.com</email>
+            <roles>
+                <role>owner</role>
+            </roles>
+        </developer>
+    </developers>
+
+    <dependencies>
+        <dependency>
+            <groupId>com.wix.pay</groupId>
+            <artifactId>libpay-api</artifactId>
+            <version>${com.wix.pay.libpay.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.wix.pay</groupId>
+            <artifactId>libpay-wirecard-common</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+        </dependency>
+        <dependency>
+            <groupId>io.spray</groupId>
+            <artifactId>spray-client_${scala.dependencies.version}</artifactId>
+            <version>${io.spray.client.version}</version>
+        </dependency>
+        <dependency>
+            <groupId>com.typesafe.akka</groupId>
+            <artifactId>akka-actor_${scala.dependencies.version}</artifactId>
+            <version>${com.typesafe.akka.actor.version}</version>
+        </dependency>
+
+        <dependency>
+            <groupId>org.json4s</groupId>
+            <artifactId>json4s-native_${scala.dependencies.version}</artifactId>
+            <version>${org.json4js.version}</version>
+        </dependency>
+
+        <!-- Test Dependencies -->
+        <dependency>
+            <groupId>com.wix.pay</groupId>
+            <artifactId>libpay-wirecard-testkit</artifactId>
+            <version>1.0.0-SNAPSHOT</version>
+            <scope>test</scope>
+        </dependency>
+        <dependency>
+            <groupId>org.specs2</groupId>
+            <artifactId>specs2-mock_${scala.dependencies.version}</artifactId>
+            <version>${specs2.version}</version>
+            <scope>test</scope>
+        </dependency>
+    </dependencies>
+</project>
