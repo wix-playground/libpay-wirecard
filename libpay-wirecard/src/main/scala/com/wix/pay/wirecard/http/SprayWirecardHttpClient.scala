@@ -1,7 +1,5 @@
 package com.wix.pay.wirecard.http
 
-import java.util.UUID
-
 import akka.actor.ActorSystem
 import com.wix.pay.{PaymentErrorException, PaymentException, PaymentRejectedException}
 import com.wix.pay.creditcard.CreditCard
@@ -28,7 +26,7 @@ class SprayWirecardHttpClient(wirecardUrls: WirecardUrls) extends WirecardHttpCl
       creditCard,
       payment,
       address
-    ))
+    )).map(_.guWid)
   }
 
   override def preauthorize(credentials: WirecardMerchant, transactionId: String, creditCard: CreditCard,
@@ -39,15 +37,15 @@ class SprayWirecardHttpClient(wirecardUrls: WirecardUrls) extends WirecardHttpCl
       creditCard,
       payment,
       address
-    )).map(WirecardAuthorization(_, transactionId))
+    ))
   }
 
   override def capture(credentials: WirecardMerchant, authorization: WirecardAuthorization, amount: Double): Try[String] =
-    postRequest(credentials, createCaptureRequest(authorization, credentials, amount))
+    postRequest(credentials, createCaptureRequest(authorization, credentials, amount)).map(_.guWid)
 
   override def voidPreauthorization(credentials: WirecardMerchant,
                                     authorization: WirecardAuthorization): Try[String] =
-    postRequest(credentials, createReversalRequest(authorization, credentials))
+    postRequest(credentials, createReversalRequest(authorization, credentials)).map(_.guWid)
 
 
   private def postRequest(credentials: WirecardMerchant, payload: Elem) = {
@@ -81,7 +79,9 @@ class SprayWirecardHttpClient(wirecardUrls: WirecardUrls) extends WirecardHttpCl
         throw PaymentErrorException(message)
     }
 
-    (response \\ "GuWID").text
+    val guWid = (response \\ "GuWID").text
+    val transactionId = (response \\ "TransactionID").text
+    WirecardAuthorization(guWid, transactionId)
   }
 
   private def gatewayUrlFor(credentials: WirecardMerchant): String =
