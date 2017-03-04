@@ -15,6 +15,8 @@ trait WirecardHttpClientTestSupport {
   val testCreditCard = CreditCard("4200000000000000", YearMonth(2019, 1),
     Some(CreditCardOptionalFields.withFields(csc = Some("471"), holderName = Some("John Doe"))))
 
+  val realCreditCard = testCreditCard.copy(number = "4222222222222")
+
   val testWirecardAddress = WirecardAddress(firstName = "John", lastName = "Doe", address1 = "52 st. 278",
     city = "New York", zipCode = "10010", state = "NY", country = "USA", email = "john@example.com")
 

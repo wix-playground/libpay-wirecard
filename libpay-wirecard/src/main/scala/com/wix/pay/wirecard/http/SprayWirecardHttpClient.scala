@@ -73,7 +73,8 @@ class SprayWirecardHttpClient(wirecardUrls: WirecardUrls) extends WirecardHttpCl
     if (result == "NOK") {
       val error = response \\ "ERROR"
       val message = (error \ "Message").text + " Advice: " + (error \ "Advice").text
-      if ((error \ "Type").text == "REJECTED")
+      val errorType = (error \ "Type").text
+      if (isRejected(errorType, message))
         throw PaymentRejectedException(message)
       else
         throw PaymentErrorException(message)
@@ -86,4 +87,7 @@ class SprayWirecardHttpClient(wirecardUrls: WirecardUrls) extends WirecardHttpCl
 
   private def gatewayUrlFor(credentials: WirecardMerchant): String =
     if (credentials.testMode) wirecardUrls.testUrl else wirecardUrls.liveUrl
+
+  private def isRejected(errorType: String, message: String) =
+    errorType == "REJECTED" || message.contains("Credit card number not allowed in demo mode")
 }

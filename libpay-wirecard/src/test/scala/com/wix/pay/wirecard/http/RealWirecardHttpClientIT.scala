@@ -18,6 +18,10 @@ class RealWirecardHttpClientIT extends SpecWithJUnit {
       purchase(rejectedPayment) must beAFailedTry(beAnInstanceOf[PaymentRejectedException])
     }
 
+    "reject different cards in demo mode" in new Ctx {
+      purchase(successfulPayment, creditCard = realCreditCard) must beAFailedTry(beAnInstanceOf[PaymentRejectedException])
+    }
+
     "fail to purchase if transaction is failed" in new Ctx {
       purchase(failingPayment) must beAFailedTry(beAnInstanceOf[PaymentErrorException])
     }
