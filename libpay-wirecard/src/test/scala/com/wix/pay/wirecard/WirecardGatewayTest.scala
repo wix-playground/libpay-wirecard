@@ -4,7 +4,7 @@ import java.util.Locale
 
 import com.wix.pay.creditcard.{AddressDetailed, CreditCard, CreditCardOptionalFields, YearMonth}
 import com.wix.pay.model.{CurrencyAmount, Customer, Name, Payment}
-import com.wix.pay.wirecard.http.{WirecardHttpClient, WirecardUrls}
+import com.wix.pay.wirecard.http.WirecardHttpClient
 import org.specs2.mock.Mockito
 import org.specs2.mutable.SpecWithJUnit
 import org.specs2.specification.Scope
@@ -67,7 +67,7 @@ class WirecardGatewayTest extends SpecWithJUnit with Mockito {
         |  "businessCaseSignature" : "test"
         |}
       """.stripMargin
-    val someCredentials = WirecardMerchant("test", "testPassword", "test")
+    val someCredentials = WirecardMerchant("test")
 
     val someFirstName = "John"
     val someLastName = "Doe"

@@ -22,32 +22,36 @@ class WirecardDriver(port: Int, matchTransactionId: Boolean = true) {
 
   def stop(): Unit = probe.doStop()
 
-  def aPreauthorizationRequest(credentials: WirecardMerchant,
+  def aPreauthorizationRequest(merchantCredentials: WirecardMerchant,
+                               appCredentials: WirecardAppCredentials,
                                transactionId: String,
                                creditCard: CreditCard,
                                payment: Payment,
                                address: WirecardAddress) =
-    PreAuthorizationRequest(credentials, transactionId, creditCard, payment, address)
+    PreAuthorizationRequest(merchantCredentials, transactionId, creditCard, payment, address, appCredentials)
 
-  def aCaptureRequest(credentials: WirecardMerchant,
+  def aCaptureRequest(merchantCredentials: WirecardMerchant,
+                      appCredentials: WirecardAppCredentials,
                       auth: WirecardAuthorization,
                       amount: Double) =
-    CaptureRequest(credentials, auth, amount)
+    CaptureRequest(merchantCredentials, auth, amount, appCredentials)
 
-  def aPurchaseRequest(credentials: WirecardMerchant,
+  def aPurchaseRequest(merchantCredentials: WirecardMerchant,
+                       appCredentials: WirecardAppCredentials,
                        transactionId: String,
                        creditCard: CreditCard,
                        payment: Payment,
                        address: WirecardAddress) =
-    PurchaseRequest(credentials, transactionId, creditCard, payment, address)
+    PurchaseRequest(merchantCredentials, transactionId, creditCard, payment, address, appCredentials)
 
-  def aVoidAuthorizationRequest(credentials: WirecardMerchant,
+  def aVoidAuthorizationRequest(merchantCredentials: WirecardMerchant,
+                                appCredentials: WirecardAppCredentials,
                       auth: WirecardAuthorization) =
-    VoidAuthorizationRequest(credentials, auth)
+    VoidAuthorizationRequest(merchantCredentials, auth, appCredentials)
 
 
   abstract class WirecardRequest(credentials: WirecardMerchant, transactionId: String,
-                                 wirecardFunction: String, expectedXmlBody: Elem) {
+                                 wirecardFunction: String, expectedXmlBody: Elem, wirecardAppCredentials: WirecardAppCredentials) {
     protected val defaultNumericValue = "1234567"
 
     def isFailedOnServer() =
@@ -95,7 +99,7 @@ class WirecardDriver(port: Int, matchTransactionId: Boolean = true) {
     }
 
     private def isAuthorized(headers: List[HttpHeader]): Boolean = headers.contains(
-      Authorization(BasicHttpCredentials(credentials.username, credentials.password))
+      Authorization(BasicHttpCredentials(wirecardAppCredentials.username, wirecardAppCredentials.password))
     )
   }
 
@@ -103,40 +107,45 @@ class WirecardDriver(port: Int, matchTransactionId: Boolean = true) {
                                      transactionId: String,
                                      creditCard: CreditCard,
                                      payment: Payment,
-                                     address: WirecardAddress)
+                                     address: WirecardAddress,
+                                     wirecardAppCredentials: WirecardAppCredentials)
     extends WirecardRequest(
       credentials,
       transactionId,
       "FNC_CC_PREAUTHORIZATION",
-      createPreauthorizationRequest(transactionId, credentials, creditCard, payment, address))
+      createPreauthorizationRequest(transactionId, credentials, creditCard, payment, address), wirecardAppCredentials)
 
   case class CaptureRequest(credentials: WirecardMerchant,
                             auth: WirecardAuthorization,
-                            amount: Double)
+                            amount: Double,
+                            wirecardAppCredentials: WirecardAppCredentials)
     extends WirecardRequest(
       credentials,
       auth.transactionId,
       "FNC_CC_CAPTURE_PREAUTHORIZATION",
-      createCaptureRequest(auth, credentials, amount))
+      createCaptureRequest(auth, credentials, amount), wirecardAppCredentials)
 
   case class PurchaseRequest(credentials: WirecardMerchant,
                              transactionId: String,
                              creditCard: CreditCard,
                              payment: Payment,
-                             address: WirecardAddress)
+                             address: WirecardAddress,
+                             wirecardAppCredentials: WirecardAppCredentials)
     extends WirecardRequest(
       credentials,
       transactionId,
       "FNC_CC_PURCHASE",
-      createPurchaseRequest(transactionId, credentials, creditCard, payment, address))
+      createPurchaseRequest(transactionId, credentials, creditCard, payment, address), wirecardAppCredentials)
 
   case class VoidAuthorizationRequest(credentials: WirecardMerchant,
-                                      auth: WirecardAuthorization)
+                                      auth: WirecardAuthorization,
+                                      wirecardAppCredentials: WirecardAppCredentials)
     extends WirecardRequest(
       credentials,
       auth.transactionId,
       "FNC_CC_REVERSAL",
-      createReversalRequest(auth, credentials))
+      createReversalRequest(auth, credentials),
+      wirecardAppCredentials)
 }
 
 private object RemoveTransactionIdRule extends RewriteRule {

@@ -11,31 +11,27 @@ class JsonWirecardMerchantParserTest extends SpecWithJUnit {
       val credentials =
         """
           {
-            "username" : "username",
-            "password" : "password",
             "businessCaseSignature" : "businessCaseSignature",
             "testMode" : true
           }
         """
-      parser.parse(credentials) mustEqual WirecardMerchant("username", "password", "businessCaseSignature", true)
+      parser.parse(credentials) mustEqual WirecardMerchant("businessCaseSignature", true)
     }
 
     "parse credentials from string without mode" in {
       val credentials =
         """
           {
-            "username" : "username",
-            "password" : "password",
             "businessCaseSignature" : "businessCaseSignature"
           }
         """
-      parser.parse(credentials) mustEqual WirecardMerchant("username", "password", "businessCaseSignature", false)
+      parser.parse(credentials) mustEqual WirecardMerchant("businessCaseSignature", false)
     }
 
     "stringify credentials" in {
-      val result = parser.stringify(WirecardMerchant("username", "password", "businessCaseSignature", false))
+      val result = parser.stringify(WirecardMerchant("businessCaseSignature", false))
       result mustEqual
-        """{"username":"username","password":"password","businessCaseSignature":"businessCaseSignature","testMode":false}"""
+        """{"businessCaseSignature":"businessCaseSignature","testMode":false}"""
     }
   }
 }

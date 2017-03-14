@@ -1,14 +1,20 @@
 package com.wix.pay.wirecard.http
 
-import com.wix.pay.wirecard.WirecardAuthorization
-import com.wix.pay.wirecard.testkit.WirecardDriver
+import com.wix.pay.wirecard.{WirecardMerchant, WirecardAuthorization}
+import com.wix.pay.wirecard.testkit.{WirecardAppCredentials, WirecardDriver}
 import com.wix.pay.{PaymentErrorException, PaymentRejectedException}
 import org.specs2.mutable.SpecWithJUnit
-import org.specs2.specification.Scope
+import org.specs2.specification.{BeforeEach, Scope}
 
-class WirecardHttpClientIT extends SpecWithJUnit {
-  val probePort = 10001
-  val driver = new WirecardDriver(probePort)
+class SandboxWirecardHttpClientIT extends SpecWithJUnit with WirecardHttpClientTestSupport with BeforeEach{
+
+  val driver = new WirecardDriver(port = 10001)
+  override val wirecardTestCredentials = WirecardMerchant("56501", testMode = true)
+
+  val liveAppCredentials = WirecardAppCredentials(username = "liveUsername", password = "livePassword")
+  val testAppCredentials = WirecardAppCredentials(username = "testUsername", password = "testPassword")
+
+  val appCredentials = testAppCredentials
 
   sequential
   step {
@@ -76,12 +82,7 @@ class WirecardHttpClientIT extends SpecWithJUnit {
   "Wirecard http client" should {
     "fail on wrong credentials" in new Ctx {
       givenWirecardAuthorizationRequest isValidWith resultGuWid
-      preauthorize(somePayment, wrongCredentials) must beFailedTry(PaymentErrorException("HTTP error. Status: 401"))
-    }
-
-    "send request to port 10002 on live credentials" in new Ctx {
-      preauthorize(somePayment, liveCredentials) must beFailedTry(
-        hasMessage("Connection attempt to localhost:10002 failed"))
+      preauthorize(somePayment, wrongMerchantCredentials) must beFailedTry(PaymentErrorException("HTTP error. Status: 401"))
     }
   }
 
@@ -89,11 +90,12 @@ class WirecardHttpClientIT extends SpecWithJUnit {
     driver.stop()
   }
 
-  trait Ctx extends Scope with WirecardHttpClientTestSupport {
-    val httpClient = new SprayWirecardHttpClient(WirecardUrls("http://localhost:10002", "http://localhost:10001"))
+  override protected def before: Any = driver.reset()
 
-    val liveCredentials = wirecardTestCredentials.copy(testMode = false)
-    val wrongCredentials = wirecardTestCredentials.copy(username = "wrong")
+  trait Ctx extends Scope {
+
+    val liveMerchantCredentials = wirecardTestCredentials.copy(testMode = false)
+    val wrongMerchantCredentials = wirecardTestCredentials.copy(businessCaseSignature = "wrong")
 
     val someGuWid = "someGuWid"
     val someAuth = WirecardAuthorization(someGuWid, transactionId)
@@ -101,18 +103,30 @@ class WirecardHttpClientIT extends SpecWithJUnit {
 
     val somePayment = successfulPayment
 
-    def givenWirecardAuthorizationRequest = driver.aPreauthorizationRequest(wirecardTestCredentials,
+    def givenWirecardAuthorizationRequest = driver.aPreauthorizationRequest(wirecardTestCredentials, appCredentials,
       transactionId, testCreditCard, somePayment, testWirecardAddress)
 
-    def givenWirecardCaptureRequest = driver.aCaptureRequest(wirecardTestCredentials, someAuth,
+    def givenWirecardCaptureRequest = driver.aCaptureRequest(wirecardTestCredentials, appCredentials, someAuth,
       somePayment.currencyAmount.amount)
 
-    def givenWirecardPurchaseRequest = driver.aPurchaseRequest(wirecardTestCredentials,
+    def givenWirecardPurchaseRequest = driver.aPurchaseRequest(wirecardTestCredentials, appCredentials,
       transactionId, testCreditCard, somePayment, testWirecardAddress)
 
-    def givenWirecardVoidAuthRequest = driver.aVoidAuthorizationRequest(wirecardTestCredentials, someAuth)
+    def givenWirecardVoidAuthRequest = driver.aVoidAuthorizationRequest(wirecardTestCredentials, appCredentials, someAuth)
 
     def hasMessage(message: String) =
       be_==("Connection attempt to localhost:10002 failed") ^^ ((e: Throwable) => e.getMessage)
   }
+
+  val httpClient = new SprayWirecardHttpClient(WirecardSettings(
+    liveSettings = WirecardModeSettings(url = "http://localhost:10002", username = liveAppCredentials.username, password = liveAppCredentials.password),
+    testSettings = WirecardModeSettings(url = "http://localhost:10001", username = testAppCredentials.username, password = testAppCredentials.password)))
+
+}
+
+class LiveWirecardHttpClientIT extends SandboxWirecardHttpClientIT {
+  override val driver = new WirecardDriver(port = 10002)
+  override val wirecardTestCredentials = WirecardMerchant("56501", testMode = false)
+
+  override val appCredentials = liveAppCredentials
 }

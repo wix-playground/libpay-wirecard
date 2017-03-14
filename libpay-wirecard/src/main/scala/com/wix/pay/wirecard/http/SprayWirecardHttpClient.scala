@@ -1,21 +1,21 @@
 package com.wix.pay.wirecard.http
 
 import akka.actor.ActorSystem
-import com.wix.pay.{PaymentErrorException, PaymentException, PaymentRejectedException}
 import com.wix.pay.creditcard.CreditCard
 import com.wix.pay.model.Payment
 import com.wix.pay.wirecard.http.WirecardRequestBuilder._
 import com.wix.pay.wirecard.{WirecardAddress, WirecardAuthorization, WirecardMerchant}
-import spray.http._
+import com.wix.pay.{PaymentErrorException, PaymentException, PaymentRejectedException}
 import spray.client.pipelining._
 import spray.http.HttpHeaders.Authorization
+import spray.http._
 
 import scala.concurrent.duration._
 import scala.concurrent.{Await, Future}
 import scala.util.Try
 import scala.xml.{Elem, XML}
 
-class SprayWirecardHttpClient(wirecardUrls: WirecardUrls) extends WirecardHttpClient {
+class SprayWirecardHttpClient(wirecardSettings: WirecardSettings) extends WirecardHttpClient {
   implicit val system = ActorSystem()
 
   override def purchase(credentials: WirecardMerchant, transactionId: String, creditCard: CreditCard,
@@ -51,9 +51,10 @@ class SprayWirecardHttpClient(wirecardUrls: WirecardUrls) extends WirecardHttpCl
   private def postRequest(credentials: WirecardMerchant, payload: Elem) = {
     import system.dispatcher
     val pipeline: HttpRequest => Future[HttpResponse] = sendReceive
+    val settings = getSettingsForMode(credentials)
 
-    val request = Post(gatewayUrlFor(credentials), payload)
-          .withHeaders(Authorization(BasicHttpCredentials(credentials.username, credentials.password)))
+    val request = Post(settings.url, payload)
+      .withHeaders(Authorization(BasicHttpCredentials(settings.username, settings.password)))
     Try {
       val rawResponse = Await.result(pipeline(request), 30.seconds)
       if (!rawResponse.status.isSuccess) {
@@ -65,6 +66,10 @@ class SprayWirecardHttpClient(wirecardUrls: WirecardUrls) extends WirecardHttpCl
       case e: PaymentException => throw e
       case e => throw PaymentErrorException(e.getMessage, e)
     }
+  }
+
+  private def getSettingsForMode(credentials: WirecardMerchant): WirecardModeSettings = {
+    if (credentials.testMode) wirecardSettings.testSettings else wirecardSettings.liveSettings
   }
 
   private def parseWirecardResponse(response: Elem) = {
@@ -84,9 +89,6 @@ class SprayWirecardHttpClient(wirecardUrls: WirecardUrls) extends WirecardHttpCl
     val transactionId = (response \\ "TransactionID").text
     WirecardAuthorization(guWid, transactionId)
   }
-
-  private def gatewayUrlFor(credentials: WirecardMerchant): String =
-    if (credentials.testMode) wirecardUrls.testUrl else wirecardUrls.liveUrl
 
   private def isRejected(errorType: String, message: String) =
     errorType == "REJECTED" || message.contains("Credit card number not allowed in demo mode")

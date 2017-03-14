@@ -10,7 +10,7 @@ trait WirecardHttpClientTestSupport {
 
   val transactionId = RandomTransactionIdProvider.nextTransactionId
 
-  val wirecardTestCredentials = WirecardMerchant("56501", "TestXAPTER", "56501", testMode = true)
+  def wirecardTestCredentials: WirecardMerchant
 
   val testCreditCard = CreditCard("4200000000000000", YearMonth(2019, 1),
     Some(CreditCardOptionalFields.withFields(csc = Some("471"), holderName = Some("John Doe"))))
