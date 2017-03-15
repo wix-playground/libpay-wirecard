@@ -47,6 +47,22 @@ object WirecardResponseBuilder {
       </CC_TRANSACTION>
     </FNC_CC_BODY>
 
+  def wrongBusinessCaseSignature(businessCaseSignature: String) =
+      <WIRECARD_BXML xmlns:xsi="http://www.w3.org/1999/XMLSchema-instance">
+        <W_RESPONSE>
+          <W_JOB>
+            <JobID></JobID>
+            <ERROR>
+              <Type>DATA_ERROR</Type>
+              <Number>10003</Number>
+              <Message>Wrong BC</Message>
+              <Advice>Business Case Signature '{businessCaseSignature}' is not accepted</Advice>
+            </ERROR>
+          </W_JOB>
+        </W_RESPONSE>
+      </WIRECARD_BXML>
+
+
   def serverFailureResponse =
     <pre>This is an error page</pre>
 }

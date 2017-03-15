@@ -18,7 +18,7 @@ trait WirecardHttpClientTestSupport {
   val realCreditCard = testCreditCard.copy(number = "4222222222222")
 
   val testWirecardAddress = WirecardAddress(firstName = "John", lastName = "Doe", address1 = "52 st. 278",
-    city = "New York", zipCode = "10010", state = "NY", country = "USA", email = "john@example.com")
+    city = "New York", zipCode = "10010", state = "NY", country = "US", email = "john@example.com")
 
   val successfulPayment = Payment(CurrencyAmount("EUR", 20.25))
 

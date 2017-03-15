@@ -41,6 +41,12 @@ class SandboxWirecardHttpClientIT extends SpecWithJUnit with WirecardHttpClientT
       givenWirecardAuthorizationRequest isFailedOnServer()
       preauthorize(somePayment) must beFailedTry(PaymentErrorException("HTTP error. Status: 500"))
     }
+
+    "fail with wrong businessCaseSignature" in new Ctx {
+      givenWirecardAuthorizationRequest isFailedWithWrongBusinessCaseSignature()
+      preauthorize(somePayment) must beFailedTry(PaymentErrorException(s"Wrong BC Advice: Business Case Signature " +
+        s"'${wirecardTestCredentials.businessCaseSignature}' is not accepted"))
+    }
   }
 
   "capture request" should {

@@ -72,6 +72,9 @@ class WirecardDriver(port: Int, matchTransactionId: Boolean = true) {
       respondWithOk(payload)
     }
 
+    def isFailedWithWrongBusinessCaseSignature() =
+      respondWithOk(wrongBusinessCaseSignature(credentials.businessCaseSignature))
+
     protected def respondWith(status: StatusCode, content: String): Unit = {
       probe.handlers += {
         case HttpRequest(HttpMethods.POST, requestPath, headers, entity, _)

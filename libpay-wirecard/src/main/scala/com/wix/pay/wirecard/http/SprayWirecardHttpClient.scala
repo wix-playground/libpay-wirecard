@@ -74,8 +74,8 @@ class SprayWirecardHttpClient(wirecardSettings: WirecardSettings) extends Wireca
 
   private def parseWirecardResponse(response: Elem) = {
     val result = (response \\ "FunctionResult").text
-
-    if (result == "NOK") {
+    val hasError = (response \\ "ERROR").nonEmpty
+    if (result == "NOK" || hasError) {
       val error = response \\ "ERROR"
       val message = (error \ "Message").text + " Advice: " + (error \ "Advice").text
       val errorType = (error \ "Type").text
