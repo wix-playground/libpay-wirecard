@@ -10,10 +10,10 @@ class RealWirecardHttpClientIT extends SpecWithJUnit with WirecardHttpClientTest
   
   val httpClient = new SprayWirecardHttpClient(WirecardSettings(
     WirecardModeSettings(url = "https://c3.wirecard.com/secure/ssl-gateway", username = "liveUsername", password = "livePassword"),
-    WirecardModeSettings(url = "https://c3-test.wirecard.com/secure/ssl-gateway", username = "56500", password = "TestXAPTER")
+    WirecardModeSettings(url = "https://c3-test.wirecard.com/secure/ssl-gateway", username = "56501", password = "TestXAPTER")
   ))
 
-  override def wirecardTestCredentials: WirecardMerchant = WirecardMerchant("56500", testMode = true)
+  override def wirecardTestCredentials: WirecardMerchant = WirecardMerchant("56501", testMode = true)
 
   "WirecardHttpClient" should {
 
