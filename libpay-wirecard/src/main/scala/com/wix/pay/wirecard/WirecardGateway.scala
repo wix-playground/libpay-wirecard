@@ -21,13 +21,16 @@ class WirecardGateway(httpClient: WirecardHttpClient,
                     customer: Option[Customer], deal: Option[Deal]): Try[String] = {
     require(payment.installments == 1, "Wirecard doesn't support installments")
 
-    httpClient.purchase(
-      merchantParser.parse(merchantKey),
-      transactionIdProvider.nextTransactionId,
-      creditCard,
-      payment,
-      WirecardAddress.Empty.withCustomer(customer).withDetailedAddress(creditCard.billingAddressDetailed)
-    )
+    val creds = merchantParser.parse(merchantKey)
+    for {
+      auth <- httpClient.preauthorize(
+        creds,
+        transactionIdProvider.nextTransactionId,
+        creditCard,
+        payment,
+        WirecardAddress.Empty.withCustomer(customer).withDetailedAddress(creditCard.billingAddressDetailed))
+      capture <- httpClient.capture(creds, auth, payment.currencyAmount.amount)
+    } yield capture
   }
 
   override def authorize(merchantKey: String, creditCard: CreditCard, payment: Payment,

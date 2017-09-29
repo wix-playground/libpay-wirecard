@@ -6,8 +6,7 @@ import com.wix.pay.{PaymentErrorException, PaymentRejectedException}
 import org.specs2.mutable.SpecWithJUnit
 
 class RealWirecardHttpClientIT extends SpecWithJUnit with WirecardHttpClientTestSupport {
-  skipAll
-  
+
   val httpClient = new SprayWirecardHttpClient(WirecardSettings(
     WirecardModeSettings(url = "https://c3.wirecard.com/secure/ssl-gateway", username = "liveUsername", password = "livePassword"),
     WirecardModeSettings(url = "https://c3-test.wirecard.com/secure/ssl-gateway", username = "56501", password = "TestXAPTER")
