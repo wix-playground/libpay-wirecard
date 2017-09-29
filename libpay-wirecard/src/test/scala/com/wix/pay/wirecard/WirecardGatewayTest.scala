@@ -16,11 +16,14 @@ class WirecardGatewayTest extends SpecWithJUnit with Mockito {
   "Wirecard Gateway" should {
     "generate new transaction and send purchase http request on sale" in new Ctx {
       givenTransactionId(someTransactionId)
+      val authorization = WirecardAuthorization("guwid", someTransactionId)
+      httpClient.preauthorize(any, any, any, any, any) returns Success(authorization)
       wirecardGateway.sale(someStringifiedCredentials, someCreditCard, somePayment, Some(someCustomer), None)
 
       got {
         one(transactionIdProvider).nextTransactionId
-        one(httpClient).purchase(someCredentials, someTransactionId, someCreditCard, somePayment, wirecardAddress)
+        one(httpClient).preauthorize(someCredentials, someTransactionId, someCreditCard, somePayment, wirecardAddress)
+        one(httpClient).capture(someCredentials, authorization, somePayment.currencyAmount.amount)
       }
     }
 

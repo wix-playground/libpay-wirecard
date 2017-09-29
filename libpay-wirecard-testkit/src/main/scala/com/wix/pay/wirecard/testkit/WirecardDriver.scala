@@ -1,5 +1,7 @@
 package com.wix.pay.wirecard.testkit
 
+import java.util.UUID
+
 import com.wix.hoopoe.http.testkit.EmbeddedHttpProbe
 import com.wix.pay.creditcard.CreditCard
 import com.wix.pay.model.Payment
@@ -8,13 +10,16 @@ import com.wix.pay.wirecard.testkit.WirecardResponseBuilder._
 import com.wix.pay.wirecard.{WirecardAddress, WirecardAuthorization, WirecardMerchant}
 import spray.http.HttpHeaders.Authorization
 import spray.http.{Uri, _}
+import WirecardDriver._
 
 import scala.xml.transform.{RewriteRule, RuleTransformer}
 import scala.xml.{Elem, Node, NodeSeq, XML}
 
-class WirecardDriver(port: Int, matchTransactionId: Boolean = true) {
-  private val probe = new EmbeddedHttpProbe(port,
-    {case HttpRequest(_, _, _, _, _) => HttpResponse(StatusCodes.Unauthorized)})
+class WirecardDriver(probe: EmbeddedHttpProbe, matchTransactionId: Boolean) {
+  def this(port: Int, matchTransactionId: Boolean = true) = this(
+    new EmbeddedHttpProbe(port, EmbeddedHttpProbe.NotFoundHandler),
+    matchTransactionId
+  )
 
   def reset(): Unit = probe.reset()
 
@@ -49,9 +54,19 @@ class WirecardDriver(port: Int, matchTransactionId: Boolean = true) {
                       auth: WirecardAuthorization) =
     VoidAuthorizationRequest(merchantCredentials, auth, appCredentials)
 
+  def anyPreauthorizationRequest() =
+    new AnyWirecardRequest(PreAuthorizationFunction)
 
-  abstract class WirecardRequest(credentials: WirecardMerchant, transactionId: String,
-                                 wirecardFunction: String, expectedXmlBody: Elem, wirecardAppCredentials: WirecardAppCredentials) {
+  def anyCaptureRequest() =
+    new AnyWirecardRequest(CaptureFunction)
+
+  def anyPurchaseRequest() =
+    new AnyWirecardRequest(PurchaseFunction)
+
+  def anyReversalRequest() =
+    new AnyWirecardRequest(ReversalFunction)
+
+  class AnyWirecardRequest(wirecardFunction: String, transactionId: String = UUID.randomUUID.toString) {
     protected val defaultNumericValue = "1234567"
 
     def isFailedOnServer() =
@@ -72,9 +87,6 @@ class WirecardDriver(port: Int, matchTransactionId: Boolean = true) {
       respondWithOk(payload)
     }
 
-    def isFailedWithWrongBusinessCaseSignature() =
-      respondWithOk(wrongBusinessCaseSignature(credentials.businessCaseSignature))
-
     protected def respondWith(status: StatusCode, content: String): Unit = {
       probe.handlers += {
         case HttpRequest(HttpMethods.POST, requestPath, headers, entity, _)
@@ -89,7 +101,22 @@ class WirecardDriver(port: Int, matchTransactionId: Boolean = true) {
       respondWith(StatusCodes.OK, content.toString)
     }
 
-    private def isStubbedEntity(entity: HttpEntity): Boolean =
+    protected def isAuthorized(headers: List[HttpHeader]): Boolean = true
+
+    protected def isStubbedEntity(entity: HttpEntity): Boolean = true
+  }
+
+  abstract class FullfiledWirecardRequest(wirecardFunction: String,
+                                          transactionId: String,
+                                          credentials: WirecardMerchant,
+                                          expectedXmlBody: Elem,
+                                          wirecardAppCredentials: WirecardAppCredentials)
+    extends AnyWirecardRequest(wirecardFunction, transactionId) {
+
+    def isFailedWithWrongBusinessCaseSignature() =
+      respondWithOk(wrongBusinessCaseSignature(credentials.businessCaseSignature))
+
+    override protected def isStubbedEntity(entity: HttpEntity): Boolean =
       toXml(expectedXmlBody.toString) xml_== toXml(entity.asString)
 
     private def toXml(content: String): NodeSeq = {
@@ -101,7 +128,7 @@ class WirecardDriver(port: Int, matchTransactionId: Boolean = true) {
       }
     }
 
-    private def isAuthorized(headers: List[HttpHeader]): Boolean = headers.contains(
+    override protected def isAuthorized(headers: List[HttpHeader]): Boolean = headers.contains(
       Authorization(BasicHttpCredentials(wirecardAppCredentials.username, wirecardAppCredentials.password))
     )
   }
@@ -112,20 +139,20 @@ class WirecardDriver(port: Int, matchTransactionId: Boolean = true) {
                                      payment: Payment,
                                      address: WirecardAddress,
                                      wirecardAppCredentials: WirecardAppCredentials)
-    extends WirecardRequest(
-      credentials,
+    extends FullfiledWirecardRequest(
+      PreAuthorizationFunction,
       transactionId,
-      "FNC_CC_PREAUTHORIZATION",
+      credentials,
       createPreauthorizationRequest(transactionId, credentials, creditCard, payment, address), wirecardAppCredentials)
 
   case class CaptureRequest(credentials: WirecardMerchant,
                             auth: WirecardAuthorization,
                             amount: Double,
                             wirecardAppCredentials: WirecardAppCredentials)
-    extends WirecardRequest(
-      credentials,
+    extends FullfiledWirecardRequest(
+      CaptureFunction,
       auth.transactionId,
-      "FNC_CC_CAPTURE_PREAUTHORIZATION",
+      credentials,
       createCaptureRequest(auth, credentials, amount), wirecardAppCredentials)
 
   case class PurchaseRequest(credentials: WirecardMerchant,
@@ -134,21 +161,28 @@ class WirecardDriver(port: Int, matchTransactionId: Boolean = true) {
                              payment: Payment,
                              address: WirecardAddress,
                              wirecardAppCredentials: WirecardAppCredentials)
-    extends WirecardRequest(
-      credentials,
+    extends FullfiledWirecardRequest(
+      PurchaseFunction,
       transactionId,
-      "FNC_CC_PURCHASE",
+      credentials,
       createPurchaseRequest(transactionId, credentials, creditCard, payment, address), wirecardAppCredentials)
 
   case class VoidAuthorizationRequest(credentials: WirecardMerchant,
                                       auth: WirecardAuthorization,
                                       wirecardAppCredentials: WirecardAppCredentials)
-    extends WirecardRequest(
-      credentials,
+    extends FullfiledWirecardRequest(
+      ReversalFunction,
       auth.transactionId,
-      "FNC_CC_REVERSAL",
+      credentials,
       createReversalRequest(auth, credentials),
       wirecardAppCredentials)
+}
+
+object WirecardDriver {
+  val PurchaseFunction = "FNC_CC_PURCHASE"
+  val PreAuthorizationFunction = "FNC_CC_PREAUTHORIZATION"
+  val CaptureFunction = "FNC_CC_CAPTURE_PREAUTHORIZATION"
+  val ReversalFunction = "FNC_CC_REVERSAL"
 }
 
 private object RemoveTransactionIdRule extends RewriteRule {
