@@ -1,21 +1,27 @@
 package com.wix.pay.wirecard.http
 
+
+import org.specs2.mutable.SpecWithJUnit
 import com.wix.pay.model.CurrencyAmount
 import com.wix.pay.wirecard.{WirecardAuthorization, WirecardMerchant}
 import com.wix.pay.{PaymentErrorException, PaymentRejectedException}
-import org.specs2.mutable.SpecWithJUnit
+
 
 class RealWirecardHttpClientIT extends SpecWithJUnit with WirecardHttpClientTestSupport {
-
-  val httpClient = new SprayWirecardHttpClient(WirecardSettings(
-    WirecardModeSettings(url = "https://c3.wirecard.com/secure/ssl-gateway", username = "liveUsername", password = "livePassword"),
-    WirecardModeSettings(url = "https://c3-test.wirecard.com/secure/ssl-gateway", username = "56501", password = "TestXAPTER")
-  ))
+  val httpClient = new AkkaWirecardHttpClient(WirecardSettings(
+    WirecardModeSettings(
+      url = "https://c3.wirecard.com/secure/ssl-gateway",
+      username = "liveUsername",
+      password = "livePassword"),
+    WirecardModeSettings(
+      url = "https://c3-test.wirecard.com/secure/ssl-gateway",
+      username = "56501",
+      password = "TestXAPTER")))
 
   override def wirecardTestCredentials: WirecardMerchant = WirecardMerchant("56501", testMode = true)
 
-  "WirecardHttpClient" should {
 
+  "WirecardHttpClient" should {
     "make successfull purchase" in {
       purchase(successfulPayment) must beASuccessfulTry
     }
@@ -25,7 +31,8 @@ class RealWirecardHttpClientIT extends SpecWithJUnit with WirecardHttpClientTest
     }
 
     "reject different cards in demo mode" in {
-      purchase(successfulPayment, creditCard = realCreditCard) must beAFailedTry(beAnInstanceOf[PaymentRejectedException])
+      purchase(successfulPayment, creditCard = realCreditCard) must beAFailedTry(
+        beAnInstanceOf[PaymentRejectedException])
     }
 
     "fail to purchase if transaction is failed" in {

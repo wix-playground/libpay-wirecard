@@ -3,7 +3,7 @@ package com.wix.pay.wirecard
 import com.wix.pay.PaymentGateway
 import com.wix.pay.creditcard.CreditCard
 import com.wix.pay.model.{Customer, Deal, Payment}
-import com.wix.pay.wirecard.http.{SprayWirecardHttpClient, WirecardHttpClient, WirecardSettings}
+import com.wix.pay.wirecard.http.{AkkaWirecardHttpClient, WirecardHttpClient, WirecardSettings}
 import com.wix.pay.wirecard.parsers.{JsonWirecardAuthorizationParser, JsonWirecardMerchantParser}
 
 import scala.util.Try
@@ -12,7 +12,7 @@ class WirecardGateway(httpClient: WirecardHttpClient,
                       transactionIdProvider: TransactionIdProvider = RandomTransactionIdProvider)
   extends PaymentGateway {
 
-  def this(wirecardSettings: WirecardSettings) = this(new SprayWirecardHttpClient(wirecardSettings))
+  def this(wirecardSettings: WirecardSettings) = this(new AkkaWirecardHttpClient(wirecardSettings))
 
   private val merchantParser = new JsonWirecardMerchantParser
   private val authorizationParser = new JsonWirecardAuthorizationParser

@@ -1,31 +1,29 @@
 package com.wix.pay.wirecard.testkit
 
-import java.util.UUID
 
-import com.wix.hoopoe.http.testkit.EmbeddedHttpProbe
+import scala.xml.transform.{RewriteRule, RuleTransformer}
+import scala.xml.{Elem, Node, NodeSeq, XML}
+import java.util.UUID
+import akka.http.scaladsl.model.Uri.Path
+import akka.http.scaladsl.model.headers.{Authorization, BasicHttpCredentials}
+import akka.http.scaladsl.model._
+import com.wix.e2e.http.api.MockWebServer
+import com.wix.e2e.http.client.extractors.HttpMessageExtractors._
+import com.wix.e2e.http.server.WebServerFactory.aMockWebServer
 import com.wix.pay.creditcard.CreditCard
 import com.wix.pay.model.Payment
 import com.wix.pay.wirecard.http.WirecardRequestBuilder._
 import com.wix.pay.wirecard.testkit.WirecardResponseBuilder._
 import com.wix.pay.wirecard.{WirecardAddress, WirecardAuthorization, WirecardMerchant}
-import spray.http.HttpHeaders.Authorization
-import spray.http.{Uri, _}
 import WirecardDriver._
 
-import scala.xml.transform.{RewriteRule, RuleTransformer}
-import scala.xml.{Elem, Node, NodeSeq, XML}
 
-class WirecardDriver(probe: EmbeddedHttpProbe, matchTransactionId: Boolean) {
-  def this(port: Int, matchTransactionId: Boolean = true) = this(
-    new EmbeddedHttpProbe(port, EmbeddedHttpProbe.NotFoundHandler),
-    matchTransactionId
-  )
+class WirecardDriver(port: Int, matchTransactionId: Boolean = true) {
+  private val server: MockWebServer = aMockWebServer.onPort(port).build
 
-  def reset(): Unit = probe.reset()
-
-  def start(): Unit = probe.doStart()
-
-  def stop(): Unit = probe.doStop()
+  def start(): Unit = server.start()
+  def stop(): Unit = server.stop()
+  def reset(): Unit = server.replaceWith()
 
   def aPreauthorizationRequest(merchantCredentials: WirecardMerchant,
                                appCredentials: WirecardAppCredentials,
@@ -69,40 +67,38 @@ class WirecardDriver(probe: EmbeddedHttpProbe, matchTransactionId: Boolean) {
   class AnyWirecardRequest(wirecardFunction: String, transactionId: String = UUID.randomUUID.toString) {
     protected val defaultNumericValue = "1234567"
 
-    def isFailedOnServer() =
-      respondWith(StatusCodes.InternalServerError, serverFailureResponse.toString)
+    def getsFailedOnServer(): Unit = respondWith(StatusCodes.InternalServerError, serverFailureResponse.toString)
 
-    def isRejectedWith(error: String, advice: String = ""): Unit = {
-      val payload = response(wirecardFunction, failedBody(transactionId, defaultNumericValue, true, error, advice))
+    def getsRejectedWith(error: String, advice: String = ""): Unit = {
+      val payload = response(
+        wirecardFunction,
+        failedBody(transactionId, defaultNumericValue, isRejected = true, error, advice))
       respondWithOk(payload)
     }
 
-    def isFailedWith(error: String, advice: String = ""): Unit = {
-      val payload = response(wirecardFunction, failedBody(transactionId, defaultNumericValue, false, error, advice))
+    def getsFailedWith(error: String, advice: String = ""): Unit = {
+      val payload = response(
+        wirecardFunction,
+        failedBody(transactionId, defaultNumericValue, isRejected = false, error, advice))
       respondWithOk(payload)
     }
 
-    def isValidWith(guWid: String): Unit = {
+    def getsValidWith(guWid: String): Unit = {
       val payload = response(wirecardFunction, validBody(transactionId, guWid))
       respondWithOk(payload)
     }
 
     protected def respondWith(status: StatusCode, content: String): Unit = {
-      probe.handlers += {
-        case HttpRequest(HttpMethods.POST, requestPath, headers, entity, _)
-          if requestPath.path == Uri("/").path &&
-            isAuthorized(headers) &&
+      server.appendAll {
+        case HttpRequest(HttpMethods.POST, Path("/"), headers, entity, _)
+          if isAuthorized(headers) &&
             isStubbedEntity(entity) =>
           HttpResponse(status = status, entity = content)
       }
     }
 
-    protected def respondWithOk(content: Any): Unit = {
-      respondWith(StatusCodes.OK, content.toString)
-    }
-
-    protected def isAuthorized(headers: List[HttpHeader]): Boolean = true
-
+    protected def respondWithOk(content: Any): Unit = respondWith(StatusCodes.OK, content.toString)
+    protected def isAuthorized(headers: Seq[HttpHeader]): Boolean = true
     protected def isStubbedEntity(entity: HttpEntity): Boolean = true
   }
 
@@ -113,11 +109,11 @@ class WirecardDriver(probe: EmbeddedHttpProbe, matchTransactionId: Boolean) {
                                           wirecardAppCredentials: WirecardAppCredentials)
     extends AnyWirecardRequest(wirecardFunction, transactionId) {
 
-    def isFailedWithWrongBusinessCaseSignature() =
+    def getsFailedWithWrongBusinessCaseSignature(): Unit =
       respondWithOk(wrongBusinessCaseSignature(credentials.businessCaseSignature))
 
     override protected def isStubbedEntity(entity: HttpEntity): Boolean =
-      toXml(expectedXmlBody.toString) xml_== toXml(entity.asString)
+      toXml(expectedXmlBody.toString) xml_== toXml(entity.extractAsString)
 
     private def toXml(content: String): NodeSeq = {
       val xml = XML.loadString(content)
@@ -128,9 +124,8 @@ class WirecardDriver(probe: EmbeddedHttpProbe, matchTransactionId: Boolean) {
       }
     }
 
-    override protected def isAuthorized(headers: List[HttpHeader]): Boolean = headers.contains(
-      Authorization(BasicHttpCredentials(wirecardAppCredentials.username, wirecardAppCredentials.password))
-    )
+    override protected def isAuthorized(headers: Seq[HttpHeader]): Boolean = headers.contains(
+      Authorization(BasicHttpCredentials(wirecardAppCredentials.username, wirecardAppCredentials.password)))
   }
 
   case class PreAuthorizationRequest(credentials: WirecardMerchant,
@@ -178,12 +173,14 @@ class WirecardDriver(probe: EmbeddedHttpProbe, matchTransactionId: Boolean) {
       wirecardAppCredentials)
 }
 
+
 object WirecardDriver {
   val PurchaseFunction = "FNC_CC_PURCHASE"
   val PreAuthorizationFunction = "FNC_CC_PREAUTHORIZATION"
   val CaptureFunction = "FNC_CC_CAPTURE_PREAUTHORIZATION"
   val ReversalFunction = "FNC_CC_REVERSAL"
 }
+
 
 private object RemoveTransactionIdRule extends RewriteRule {
   override def transform(n: Node): Seq[Node] = n match {

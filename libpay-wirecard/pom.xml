@@ -37,16 +37,20 @@
             <version>1.0.0-SNAPSHOT</version>
         </dependency>
         <dependency>
-            <groupId>io.spray</groupId>
-            <artifactId>spray-client_${scala.dependencies.version}</artifactId>
-            <version>${io.spray.client.version}</version>
+            <groupId>com.typesafe.akka</groupId>
+            <artifactId>akka-http_${scala.dependencies.version}</artifactId>
+            <version>${com.typesafe.akka.version}</version>
         </dependency>
         <dependency>
             <groupId>com.typesafe.akka</groupId>
-            <artifactId>akka-actor_${scala.dependencies.version}</artifactId>
-            <version>${com.typesafe.akka.actor.version}</version>
+            <artifactId>akka-stream_${scala.dependencies.version}</artifactId>
+            <version>${com.typesafe.akka.stream.version}</version>
         </dependency>
-
+        <dependency>
+            <groupId>com.typesafe.akka</groupId>
+            <artifactId>akka-http-xml_${scala.dependencies.version}</artifactId>
+            <version>${com.typesafe.akka.version}</version>
+        </dependency>
         <dependency>
             <groupId>org.json4s</groupId>
             <artifactId>json4s-native_${scala.dependencies.version}</artifactId>

@@ -1,22 +1,31 @@
 package com.wix.pay.wirecard.http
 
+
+import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.util.Try
+import scala.xml.{Elem, XML}
 import akka.actor.ActorSystem
+import akka.http.scaladsl.Http
+import akka.http.scaladsl.client.RequestBuilding.Post
+import akka.http.scaladsl.marshallers.xml.ScalaXmlSupport._
+import akka.http.scaladsl.model._
+import akka.http.scaladsl.model.headers.{Authorization, BasicHttpCredentials}
+import akka.http.scaladsl.unmarshalling.Unmarshal
+import akka.stream.ActorMaterializer
 import com.wix.pay.creditcard.CreditCard
 import com.wix.pay.model.Payment
 import com.wix.pay.wirecard.http.WirecardRequestBuilder._
 import com.wix.pay.wirecard.{WirecardAddress, WirecardAuthorization, WirecardMerchant}
 import com.wix.pay.{PaymentErrorException, PaymentException, PaymentRejectedException}
-import spray.client.pipelining._
-import spray.http.HttpHeaders.Authorization
-import spray.http._
 
-import scala.concurrent.duration._
-import scala.concurrent.{Await, Future}
-import scala.util.Try
-import scala.xml.{Elem, XML}
 
-class SprayWirecardHttpClient(wirecardSettings: WirecardSettings) extends WirecardHttpClient {
-  implicit val system = ActorSystem()
+class AkkaWirecardHttpClient(wirecardSettings: WirecardSettings) extends WirecardHttpClient {
+  private implicit val system: ActorSystem = ActorSystem("akka-http-wirecard-system")
+  private implicit val executionContext: ExecutionContext = system.dispatcher
+  private implicit val materializer: ActorMaterializer = ActorMaterializer()
+  private val http = Http()
+
 
   override def purchase(credentials: WirecardMerchant, transactionId: String, creditCard: CreditCard,
                         payment: Payment, address: WirecardAddress): Try[String] = {
@@ -25,8 +34,7 @@ class SprayWirecardHttpClient(wirecardSettings: WirecardSettings) extends Wireca
       credentials,
       creditCard,
       payment,
-      address
-    )).map(_.guWid)
+      address)).map(_.guWid)
   }
 
   override def preauthorize(credentials: WirecardMerchant, transactionId: String, creditCard: CreditCard,
@@ -36,11 +44,12 @@ class SprayWirecardHttpClient(wirecardSettings: WirecardSettings) extends Wireca
       credentials,
       creditCard,
       payment,
-      address
-    ))
+      address))
   }
 
-  override def capture(credentials: WirecardMerchant, authorization: WirecardAuthorization, amount: Double): Try[String] =
+  override def capture(credentials: WirecardMerchant,
+                       authorization: WirecardAuthorization,
+                       amount: Double): Try[String] =
     postRequest(credentials, createCaptureRequest(authorization, credentials, amount)).map(_.guWid)
 
   override def voidPreauthorization(credentials: WirecardMerchant,
@@ -49,22 +58,22 @@ class SprayWirecardHttpClient(wirecardSettings: WirecardSettings) extends Wireca
 
 
   private def postRequest(credentials: WirecardMerchant, payload: Elem) = {
-    import system.dispatcher
-    val pipeline: HttpRequest => Future[HttpResponse] = sendReceive
+    val pipeline: HttpRequest => Future[HttpResponse] = request => http.singleRequest(request)
     val settings = getSettingsForMode(credentials)
 
     val request = Post(settings.url, payload)
       .withHeaders(Authorization(BasicHttpCredentials(settings.username, settings.password)))
+
     Try {
       val rawResponse = Await.result(pipeline(request), 30.seconds)
       if (!rawResponse.status.isSuccess) {
         throw PaymentErrorException(s"HTTP error. Status: ${rawResponse.status.intValue}")
       }
 
-      parseWirecardResponse(XML.loadString(rawResponse.entity.asString))
+      parseWirecardResponse(XML.loadString(Await.result(Unmarshal(rawResponse.entity).to[String], 30.seconds)))
     } recover {
       case e: PaymentException => throw e
-      case e => throw PaymentErrorException(e.getMessage, e)
+      case e                   => throw PaymentErrorException(e.getMessage, e)
     }
   }
 
