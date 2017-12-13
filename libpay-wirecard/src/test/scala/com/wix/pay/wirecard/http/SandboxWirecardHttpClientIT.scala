@@ -101,8 +101,7 @@ class SandboxWirecardHttpClientIT extends SpecWithJUnit with WirecardHttpClientT
   "Wirecard http client" should {
     "fail on wrong credentials" in new Ctx {
       givenWirecardAuthorizationRequest getsValidWith resultGuWid
-      preauthorize(somePayment, wrongMerchantCredentials) must beFailedTry(
-        PaymentErrorException("HTTP error. Status: 404"))
+      preauthorize(somePayment, wrongMerchantCredentials) must beFailedTry.withThrowable[PaymentErrorException]
     }
   }
 

@@ -1,25 +1,26 @@
 package com.wix.pay.wirecard.testkit
 
-
-import scala.xml.transform.{RewriteRule, RuleTransformer}
-import scala.xml.{Elem, Node, NodeSeq, XML}
 import java.util.UUID
+
 import akka.http.scaladsl.model.Uri.Path
-import akka.http.scaladsl.model.headers.{Authorization, BasicHttpCredentials}
 import akka.http.scaladsl.model._
-import com.wix.e2e.http.api.MockWebServer
+import akka.http.scaladsl.model.headers.{Authorization, BasicHttpCredentials}
+import com.wix.e2e.http.api.StubWebServer
 import com.wix.e2e.http.client.extractors.HttpMessageExtractors._
-import com.wix.e2e.http.server.WebServerFactory.aMockWebServer
+import com.wix.e2e.http.server.WebServerFactory.aStubWebServer
 import com.wix.pay.creditcard.CreditCard
 import com.wix.pay.model.Payment
 import com.wix.pay.wirecard.http.WirecardRequestBuilder._
+import com.wix.pay.wirecard.testkit.WirecardDriver._
 import com.wix.pay.wirecard.testkit.WirecardResponseBuilder._
 import com.wix.pay.wirecard.{WirecardAddress, WirecardAuthorization, WirecardMerchant}
-import WirecardDriver._
+
+import scala.xml.transform.{RewriteRule, RuleTransformer}
+import scala.xml.{Elem, Node, NodeSeq, XML}
 
 
-class WirecardDriver(port: Int, matchTransactionId: Boolean = true) {
-  private val server: MockWebServer = aMockWebServer.onPort(port).build
+class WirecardDriver(server: StubWebServer, matchTransactionId: Boolean) {
+  def this(port: Int, matchTransactionId: Boolean = true) = this(aStubWebServer.onPort(port).build, matchTransactionId)
 
   def start(): Unit = server.start()
   def stop(): Unit = server.stop()
