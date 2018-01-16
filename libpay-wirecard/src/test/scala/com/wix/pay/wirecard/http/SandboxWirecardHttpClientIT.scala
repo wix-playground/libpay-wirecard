@@ -38,23 +38,23 @@ class SandboxWirecardHttpClientIT extends SpecWithJUnit with WirecardHttpClientT
 
     "fail with PaymentRejectedException for rejected transactions" in new Ctx {
       givenWirecardAuthorizationRequest getsRejectedWith("error", "advice")
-      preauthorize(somePayment) must beFailedTry(PaymentRejectedException("error Advice: advice"))
+      preauthorize(somePayment) must beFailedTry(be_==(PaymentRejectedException("error Advice: advice")))
     }
 
     "fail with PaymentErrorException for erroneous transactions" in new Ctx {
       givenWirecardAuthorizationRequest getsFailedWith ("error", "advice")
-      preauthorize(somePayment) must beFailedTry(PaymentErrorException("error Advice: advice"))
+      preauthorize(somePayment) must beFailedTry(be_==(PaymentErrorException("error Advice: advice")))
     }
 
     "fail with bad status code" in new Ctx {
       givenWirecardAuthorizationRequest getsFailedOnServer()
-      preauthorize(somePayment) must beFailedTry(PaymentErrorException("HTTP error. Status: 500"))
+      preauthorize(somePayment) must beFailedTry(be_==(PaymentErrorException("HTTP error. Status: 500")))
     }
 
     "fail with wrong businessCaseSignature" in new Ctx {
       givenWirecardAuthorizationRequest getsFailedWithWrongBusinessCaseSignature()
-      preauthorize(somePayment) must beFailedTry(PaymentErrorException(s"Wrong BC Advice: Business Case Signature " +
-        s"'${wirecardTestCredentials.businessCaseSignature}' is not accepted"))
+      preauthorize(somePayment) must beFailedTry(be_==(PaymentErrorException(s"Wrong BC Advice: Business Case Signature " +
+        s"'${wirecardTestCredentials.businessCaseSignature}' is not accepted")))
     }
   }
 
@@ -67,7 +67,7 @@ class SandboxWirecardHttpClientIT extends SpecWithJUnit with WirecardHttpClientT
 
     "fail with PaymentRejectedException for rejected capture" in new Ctx {
       givenWirecardCaptureRequest getsRejectedWith("error", "advice")
-      capture(someAuth, somePayment) must beFailedTry(PaymentRejectedException("error Advice: advice"))
+      capture(someAuth, somePayment) must beFailedTry(be_==(PaymentRejectedException("error Advice: advice")))
     }
   }
 
@@ -80,7 +80,7 @@ class SandboxWirecardHttpClientIT extends SpecWithJUnit with WirecardHttpClientT
 
     "fail with PaymentRejectedException for rejected purchase" in new Ctx {
       givenWirecardPurchaseRequest getsRejectedWith("error", "advice")
-      purchase(somePayment) must beFailedTry(PaymentRejectedException("error Advice: advice"))
+      purchase(somePayment) must beFailedTry(be_==(PaymentRejectedException("error Advice: advice")))
     }
   }
 
@@ -93,7 +93,7 @@ class SandboxWirecardHttpClientIT extends SpecWithJUnit with WirecardHttpClientT
 
     "fail with PaymentRejectedException for rejected purchase" in new Ctx {
       givenWirecardVoidAuthRequest getsFailedWith ("error", "advice")
-      voidPreauthorization(someAuth) must beFailedTry(PaymentErrorException("error Advice: advice"))
+      voidPreauthorization(someAuth) must beFailedTry(be_==(PaymentErrorException("error Advice: advice")))
     }
   }
 
