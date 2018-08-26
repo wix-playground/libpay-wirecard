@@ -86,7 +86,7 @@ class WirecardGatewayTest extends SpecWithJUnit with Mockito {
       Some(CreditCardOptionalFields
         .withFields(csc = Some("471"), holderName = Some(s"$someFirstName $someLastName"))
         .withBillingAddressDetailed(Some(someAddress))))
-    val someCustomer = Customer(Some(Name(someFirstName, someLastName)), email = Some(someEmail))
+    val someCustomer = Customer(name = Some(Name(someFirstName, someLastName)), email = Some(someEmail))
     val wirecardAddress = WirecardAddress(someFirstName, someLastName, someStreet, "", someCity, somePostalCode,
       someState, "US", "", "email@email.com")
 
