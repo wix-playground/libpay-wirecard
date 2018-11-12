@@ -1,10 +1,6 @@
 package com.wix.pay.wirecard.http
 
 
-import scala.concurrent.duration._
-import scala.concurrent.{Await, ExecutionContext, Future}
-import scala.util.Try
-import scala.xml.{Elem, XML}
 import akka.actor.ActorSystem
 import akka.http.scaladsl.Http
 import akka.http.scaladsl.client.RequestBuilding.Post
@@ -18,6 +14,11 @@ import com.wix.pay.model.Payment
 import com.wix.pay.wirecard.http.WirecardRequestBuilder._
 import com.wix.pay.wirecard.{WirecardAddress, WirecardAuthorization, WirecardMerchant}
 import com.wix.pay.{PaymentErrorException, PaymentException, PaymentRejectedException}
+
+import scala.concurrent.duration._
+import scala.concurrent.{Await, ExecutionContext, Future}
+import scala.util.Try
+import scala.xml.{Elem, XML}
 
 
 class AkkaWirecardHttpClient(wirecardSettings: WirecardSettings) extends WirecardHttpClient {
@@ -73,7 +74,7 @@ class AkkaWirecardHttpClient(wirecardSettings: WirecardSettings) extends Wirecar
       parseWirecardResponse(XML.loadString(Await.result(Unmarshal(rawResponse.entity).to[String], 30.seconds)))
     } recover {
       case e: PaymentException => throw e
-      case e                   => throw PaymentErrorException(e.getMessage, e)
+      case e => throw PaymentErrorException(e.getMessage, e)
     }
   }
 
@@ -88,10 +89,9 @@ class AkkaWirecardHttpClient(wirecardSettings: WirecardSettings) extends Wirecar
       val error = response \\ "ERROR"
       val message = (error \ "Message").text + " Advice: " + (error \ "Advice").text
       val errorType = (error \ "Type").text
-      if (isRejected(errorType, message))
-        throw PaymentRejectedException(message)
-      else
-        throw PaymentErrorException(message)
+      val transactionId = (response \\ "GuWID").lastOption.map(_.text).orElse((response \\ "TransactionID").lastOption.map(_.text))
+      if (isRejected(errorType, message)) throw PaymentRejectedException(message, transactionId = transactionId)
+      else throw PaymentErrorException(message, transactionId = transactionId)
     }
 
     val guWid = (response \\ "GuWID").text

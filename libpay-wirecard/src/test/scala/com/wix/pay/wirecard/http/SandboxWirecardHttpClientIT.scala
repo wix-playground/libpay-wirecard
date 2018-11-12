@@ -9,6 +9,8 @@ import com.wix.pay.wirecard.testkit.{WirecardAppCredentials, WirecardDriver}
 import com.wix.pay.{PaymentErrorException, PaymentRejectedException}
 import org.specs2.matcher.Matcher
 
+import scala.util.Try
+
 
 class SandboxWirecardHttpClientIT extends SpecWithJUnit with WirecardHttpClientTestSupport with BeforeEach{
   val driver = new WirecardDriver(port = 10001)
@@ -41,6 +43,21 @@ class SandboxWirecardHttpClientIT extends SpecWithJUnit with WirecardHttpClientT
       preauthorize(somePayment) must beFailedTry(be_==(PaymentRejectedException("error Advice: advice")))
     }
 
+    "fail with PaymentRejectedException with guWid for rejected transactions only guWid exists in response" in new Ctx {
+      givenWirecardAuthorizationRequest getsRejectedWith("error", "advice", guWid = someOptionGuWid)
+      preauthorize(somePayment) must beFailedTry(be_==(PaymentRejectedException("error Advice: advice", transactionId = someOptionGuWid)))
+    }
+
+    "fail with PaymentRejectedException with transactionId for rejected transactions when only transactionId exists in response" in new Ctx {
+      givenWirecardAuthorizationRequest getsRejectedWith("error", "advice", transactionId = someOptionTransactionId)
+      preauthorize(somePayment) must beFailedTry(be_==(PaymentRejectedException("error Advice: advice",  someOptionTransactionId)))
+    }
+
+    "fail with PaymentRejectedException with guWid for rejected transactions when guWid and transactionId exists in response" in new Ctx {
+      givenWirecardAuthorizationRequest getsRejectedWith("error", "advice", guWid = someOptionGuWid, transactionId = someOptionTransactionId)
+      preauthorize(somePayment) must beFailedTry(be_==(PaymentRejectedException("error Advice: advice", someOptionGuWid)))
+    }
+
     "fail with PaymentErrorException for erroneous transactions" in new Ctx {
       givenWirecardAuthorizationRequest getsFailedWith ("error", "advice")
       preauthorize(somePayment) must beFailedTry(be_==(PaymentErrorException("error Advice: advice")))
@@ -69,6 +86,21 @@ class SandboxWirecardHttpClientIT extends SpecWithJUnit with WirecardHttpClientT
       givenWirecardCaptureRequest getsRejectedWith("error", "advice")
       capture(someAuth, somePayment) must beFailedTry(be_==(PaymentRejectedException("error Advice: advice")))
     }
+
+    "fail with PaymentRejectedException with GuWid for rejected capture when only guWid exists" in new Ctx {
+      givenWirecardCaptureRequest getsRejectedWith("error", "advice", guWid = someOptionGuWid)
+      capture(someAuth, somePayment) must beFailedTry(be_==(PaymentRejectedException("error Advice: advice", someOptionGuWid)))
+    }
+
+    "fail with PaymentRejectedException with transactionId for rejected capture when only transactionId exists" in new Ctx {
+      givenWirecardCaptureRequest getsRejectedWith("error", "advice", transactionId = someOptionTransactionId)
+      capture(someAuth, somePayment) must beFailedTry(be_==(PaymentRejectedException("error Advice: advice", someOptionTransactionId)))
+    }
+
+    "fail with PaymentRejectedException with GuWid for rejected capture when guWid and transactionId exists" in new Ctx {
+      givenWirecardCaptureRequest getsRejectedWith("error", "advice", guWid = someOptionGuWid, transactionId = someOptionTransactionId)
+      capture(someAuth, somePayment) must beFailedTry(be_==(PaymentRejectedException("error Advice: advice", someOptionGuWid)))
+    }
   }
 
 
@@ -82,6 +114,21 @@ class SandboxWirecardHttpClientIT extends SpecWithJUnit with WirecardHttpClientT
       givenWirecardPurchaseRequest getsRejectedWith("error", "advice")
       purchase(somePayment) must beFailedTry(be_==(PaymentRejectedException("error Advice: advice")))
     }
+
+    "fail with PaymentRejectedException with GuWid for rejected capture when only guWid exists" in new Ctx {
+      givenWirecardPurchaseRequest getsRejectedWith("error", "advice", guWid = someOptionGuWid)
+      purchase(somePayment) must beFailedTry(be_==(PaymentRejectedException("error Advice: advice", someOptionGuWid)))
+    }
+
+    "fail with PaymentRejectedException with transactionId for rejected capture when only transactionId exists" in new Ctx {
+      givenWirecardPurchaseRequest getsRejectedWith("error", "advice", transactionId = someOptionTransactionId)
+      purchase(somePayment) must beFailedTry(be_==(PaymentRejectedException("error Advice: advice", someOptionTransactionId)))
+    }
+
+    "fail with PaymentRejectedException with GuWid for rejected capture when guWid and transactionId exists" in new Ctx {
+      givenWirecardPurchaseRequest getsRejectedWith("error", "advice", guWid = someOptionGuWid, transactionId = someOptionTransactionId)
+      purchase(somePayment) must beFailedTry(be_==(PaymentRejectedException("error Advice: advice", someOptionGuWid)))
+    }
   }
 
 
@@ -91,9 +138,24 @@ class SandboxWirecardHttpClientIT extends SpecWithJUnit with WirecardHttpClientT
       voidPreauthorization(someAuth) must beSuccessfulTry(resultGuWid)
     }
 
-    "fail with PaymentRejectedException for rejected purchase" in new Ctx {
+    "fail with PaymentErrorException for rejected purchase" in new Ctx {
       givenWirecardVoidAuthRequest getsFailedWith ("error", "advice")
       voidPreauthorization(someAuth) must beFailedTry(be_==(PaymentErrorException("error Advice: advice")))
+    }
+
+    "fail with PaymentErrorException with GuWid for rejected capture when only guWid exists" in new Ctx {
+      givenWirecardVoidAuthRequest getsFailedWith("error", "advice", guWid = someOptionGuWid)
+      voidPreauthorization(someAuth) must beFailedTry(be_==(PaymentErrorException("error Advice: advice", someOptionGuWid)))
+    }
+
+    "fail with PaymentErrorException with transactionId for rejected capture when only transactionId exists" in new Ctx {
+      givenWirecardVoidAuthRequest getsFailedWith("error", "advice", transactionId = someOptionTransactionId)
+      voidPreauthorization(someAuth) must beFailedTry(be_==(PaymentErrorException("error Advice: advice", someOptionTransactionId)))
+    }
+
+    "fail with PaymentErrorException with GuWid for rejected capture when guWid and transactionId exists" in new Ctx {
+      givenWirecardVoidAuthRequest getsFailedWith("error", "advice", guWid = someOptionGuWid, transactionId = someOptionTransactionId)
+      voidPreauthorization(someAuth) must beFailedTry(be_==(PaymentErrorException("error Advice: advice", someOptionGuWid)))
     }
   }
 
@@ -118,6 +180,8 @@ class SandboxWirecardHttpClientIT extends SpecWithJUnit with WirecardHttpClientT
     val someGuWid = "someGuWid"
     val someAuth = WirecardAuthorization(someGuWid, transactionId)
     val resultGuWid = "resultGuWid"
+    val someOptionTransactionId = Some(transactionId)
+    val someOptionGuWid = Some(resultGuWid)
 
     val somePayment: Payment = successfulPayment
 

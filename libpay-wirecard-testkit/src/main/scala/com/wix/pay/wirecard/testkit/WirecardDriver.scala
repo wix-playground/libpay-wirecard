@@ -70,17 +70,17 @@ class WirecardDriver(server: StubWebServer, matchTransactionId: Boolean) {
 
     def getsFailedOnServer(): Unit = respondWith(StatusCodes.InternalServerError, serverFailureResponse.toString)
 
-    def getsRejectedWith(error: String, advice: String = ""): Unit = {
+    def getsRejectedWith(error: String, advice: String, transactionId: Option[String] = None, guWid: Option[String] = None) {
       val payload = response(
         wirecardFunction,
-        failedBody(transactionId, defaultNumericValue, isRejected = true, error, advice))
+        failedBody(transactionId, guWid, isRejected = true, error, advice))
       respondWithOk(payload)
     }
 
-    def getsFailedWith(error: String, advice: String = ""): Unit = {
+    def getsFailedWith(error: String, advice: String, transactionId: Option[String] = None, guWid: Option[String] = None): Unit = {
       val payload = response(
         wirecardFunction,
-        failedBody(transactionId, defaultNumericValue, isRejected = false, error, advice))
+        failedBody(transactionId, guWid, isRejected = false, error, advice))
       respondWithOk(payload)
     }
 

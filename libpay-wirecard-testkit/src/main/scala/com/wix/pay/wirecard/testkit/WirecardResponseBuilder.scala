@@ -1,6 +1,6 @@
 package com.wix.pay.wirecard.testkit
 
-import scala.xml.Elem
+import scala.xml.{Elem, NodeSeq}
 
 object WirecardResponseBuilder {
 
@@ -27,12 +27,12 @@ object WirecardResponseBuilder {
       </CC_TRANSACTION>
     </FNC_CC_BODY>
 
-  def failedBody(transactionId: String, guWid: String, isRejected: Boolean, error: String, advice: String) =
+  def failedBody(transactionId: Option[String], guWid: Option[String], isRejected: Boolean, error: String, advice: String) =
     <FNC_CC_BODY>
       <CC_TRANSACTION>
-        <TransactionID>{transactionId}</TransactionID>
+        {transactionId.map(x => <TransactionID>{x}</TransactionID>).getOrElse(NodeSeq.Empty)}
         <PROCESSING_STATUS>
-          <GuWID>{guWid}</GuWID>
+          {guWid.map(x => <GuWID>{x}</GuWID>).getOrElse(NodeSeq.Empty)}
           <AuthorizationCode>639452</AuthorizationCode>
           <StatusType>INFO</StatusType>
           <FunctionResult>NOK</FunctionResult>
